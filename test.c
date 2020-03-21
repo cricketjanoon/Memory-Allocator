@@ -3,6 +3,31 @@
 #include <unistd.h>
 #include "mem.h"
 
+
+void print_free_alloc_list(struct header *free_list, struct header *alloc_list)
+{
+        printf("---------------------Free List-------------------------\n");
+    struct header *c = free_list;
+    while(c)
+    {
+        printf("Address: %p, Size: %d, Next: %p\n", c, c->size, c->next);
+        c = c->next;
+    }
+    printf("-------------------------------------------------------\n");
+
+
+    printf("---------------------Allocated List--------------------\n");
+    c = alloc_list;
+    while(c)
+    {
+        printf("Address: %p, Size: %d, Next: %p\n", c, c->size, c->next);
+        c = c->next;
+    }
+    printf("-------------------------------------------------------\n");
+}
+
+
+
 int main()
 {
 
@@ -13,6 +38,9 @@ int main()
 
     printf("size requested: %d\n", 5*sizeof(int));
     int *arr = (int *)Mem_Alloc(5*sizeof(int), 0);
+    int *arr2 = (int *)Mem_Alloc(6*sizeof(int), 0);
+    int *arr3 = (int *)Mem_Alloc(8*sizeof(int), 0);
+    int *arr4 = (int *)Mem_Alloc(9*sizeof(int), 0);
     
     arr[0] = 5; printf("addres of arr[0]: %p\n", arr);
     arr[1] = 4;
@@ -20,31 +48,26 @@ int main()
     arr[3] = 2;
     arr[4] = 1;
 
-    // for(int i=0; i<5; i++)
-    // {
-    //     printf("-> %d\n", arr[i]);
-    // }
+    arr2[0] = 5; printf("addres of arr2[0]: %p\n", arr2);
+    arr2[1] = 4;
+    arr2[2] = 3;
+    arr2[3] = 2;
+    arr2[4] = 1;
+    arr2[5] = 7;
 
-    printf("-----------------------------\n");
-    printf("Free list: %p\n", *free_list);
-    printf("size: %d\n", (*free_list)->size);
-    printf("next: %p\n",(*free_list)->next);
-    printf("-----------------------------\n");
+    print_free_alloc_list(*free_list, *allo_list);
 
-    printf("-----------------------------\n");
-    printf("Alloc list: %p\n", *allo_list);
-    printf("size: %d\n", (*allo_list)->size);
-    printf("next: %p\n", (*allo_list)->next);
-    printf("-----------------------------\n");
+    Mem_Free(arr2, 0, 0);
 
+    print_free_alloc_list(*free_list, *allo_list);
+
+    // printf("%d: ", sizeof(int)); //4
     // printf("page size: %d\n", page_size); //4096
     // printf("size of struct header: %d\n", sizeof(struct header)); //16
     // printf("size of struct header *: %d\n", sizeof(struct header*)); //8
     // printf("size of struct header **: %d\n", sizeof(struct header **)); //8
 
-
-    hexDump(NULL, head_ptr, 256);
-
+    // hexDump(NULL, head_ptr, 256);
 
     return 0;
 }

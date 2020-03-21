@@ -140,7 +140,52 @@ void *Mem_Alloc(int size, int expand)
     }
     else
     {
-        //TODO: handle the case of memory expansion and error return
+        if(expand)
+        {
+            //TODO: handle the case of memory expansion
+        }
+        else
+        {
+            return NULL;
+        }
+    }
+}
+
+int Mem_Free(void *ptr, int coalesce, int release)
+{
+    if(ptr == NULL)
+        return 0;
+
+    struct header **free_list = (struct header **)head_ptr;
+    struct header **allo_list = free_list+1;
+
+    struct header *block_to_free = ptr - sizeof(struct header);
+
+
+    printf("Address: %p, Size: %d, Next: %p\n", block_to_free, block_to_free->size, block_to_free->next);
+
+    struct header *cur = *allo_list, *prev = *allo_list;
+    while (cur && cur->next != block_to_free)
+    {
+        prev = cur;
+        cur = cur->next;
+    }
+    
+    if(cur)
+    {
+        //remove from allocated list
+        if(cur == prev) // if there is the first in the list
+        {
+            (*allo_list) = cur->next;
+        }
+        else // if in the middle of the list
+        {
+            prev->next = cur->next;
+        }
+        
+        //add block at the start of free block
+        cur->next = *free_list;
+        *free_list = cur;
     }
 }
 

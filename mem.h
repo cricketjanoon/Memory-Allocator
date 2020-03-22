@@ -26,10 +26,10 @@ void log_address(char *s, void *ptr)
 void *Mem_Init(int sizeOfRegion)
 {
     head_ptr = mmap(NULL, sizeOfRegion, PROT_READ| PROT_WRITE , MAP_PRIVATE | MAP_ANON , -1 , 0);
-    log_address("head_ptr after mmap", head_ptr);
 
     if(head_ptr == MAP_FAILED)
     {
+        printf("Mem_Init(): Requested memory cannot be assigned.\n");
         return NULL;
     }
     else
@@ -146,6 +146,7 @@ void *Mem_Alloc(int size, int expand)
         }
         else
         {
+            printf("Mem_Alloc(): Cannot provide more memory.\n");
             return NULL;
         }
     }
@@ -236,5 +237,25 @@ void hexDump(char *desc, void *addr, int len)
     printf("  %s\n", buff);
 }
 
+void print_free_alloc_list(struct header *free_list, struct header *alloc_list)
+{
+    printf("---------------------Free List-------------------------\n");
+    struct header *c = free_list;
+    while(c)
+    {
+        printf("Address: %p, Size: %d, Next: %p\n", c, c->size, c->next);
+        c = c->next;
+    }
+    printf("-------------------------------------------------------\n");
 
+
+    printf("---------------------Allocated List--------------------\n");
+    c = alloc_list;
+    while(c)
+    {
+        printf("Address: %p, Size: %d, Next: %p\n", c, c->size, c->next);
+        c = c->next;
+    }
+    printf("-------------------------------------------------------\n");
+}
 #endif

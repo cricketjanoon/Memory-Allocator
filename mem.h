@@ -237,8 +237,15 @@ void hexDump(char *desc, void *addr, int len)
     printf("  %s\n", buff);
 }
 
-void print_free_alloc_list(struct header *free_list, struct header *alloc_list)
+void print_free_alloc_list()
 {
+
+    struct header **free_l = (struct header **)head_ptr;
+    struct header **allo_l = free_l +1;
+
+    struct header *free_list = *free_l;
+    struct header *alloc_list = *allo_l;
+
     printf("---------------------Free List-------------------------\n");
     struct header *c = free_list;
     while(c)

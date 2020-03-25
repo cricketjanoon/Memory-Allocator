@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <stdio.h>
 
+int DEBUG = 0;
 
 void *head_ptr;
 
@@ -20,7 +21,8 @@ struct header
 
 void log_address(char *s, void *ptr)
 {
-    printf("%s: %p\n", s, ptr);
+    if(DEBUG)
+       printf("%s: %p\n", s, ptr);
 }
 
 void *Mem_Init(int sizeOfRegion)
@@ -29,7 +31,8 @@ void *Mem_Init(int sizeOfRegion)
 
     if(head_ptr == MAP_FAILED)
     {
-        printf("Mem_Init(): Requested memory cannot be assigned.\n");
+        if(DEBUG)
+            printf("Mem_Init(): Requested memory cannot be assigned.\n");
         return NULL;
     }
     else
@@ -161,9 +164,11 @@ void *Mem_Alloc(int size, int expand)
             *alloc_list = cur_free_block;
         }
         
-        printf("Mem_Alloc: Block Assigned: %p, Size: %d, Next: %p\n", cur_free_block, cur_free_block->size, cur_free_block->next);
-        printf("Mem_Alloc: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
-
+        if(DEBUG)
+        {
+            printf("Mem_Alloc: Block Assigned: %p, Size: %d, Next: %p\n", cur_free_block, cur_free_block->size, cur_free_block->next);
+            printf("Mem_Alloc: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
+        }
         return (void *)cur_free_block + sizeof(struct header);
 
     }
@@ -198,7 +203,8 @@ int Mem_Free(void *ptr, int coalesce, int release)
         cur = cur->next;
     }
     
-    printf("Mem_Free: Addr: %p, Size: %d, Next: %p, Cur: %p, Prev: %p\n", block_to_free, block_to_free->size, block_to_free->next, cur, prev);
+    if(DEBUG)
+        printf("Mem_Free: Addr: %p, Size: %d, Next: %p, Cur: %p, Prev: %p\n", block_to_free, block_to_free->size, block_to_free->next, cur, prev);
 
     if(cur)
     {
@@ -215,8 +221,9 @@ int Mem_Free(void *ptr, int coalesce, int release)
         //add block at the start of free block
         cur->next = *free_list;
         *free_list = cur;
-
-        printf("Mem_Free: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
+        
+        if(DEBUG)
+            printf("Mem_Free: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
     }
 }
 

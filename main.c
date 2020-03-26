@@ -14,6 +14,7 @@ struct queue_element
 struct queue_element *head=NULL, *tail=NULL;
 
 void print_queue();
+void test_my_code();
 
 void read_file()
 {
@@ -27,27 +28,25 @@ void read_file()
     {
         strtok(line, "\n"); //remove '\n' from the string
 
-        // printf("Processing request: %s\n", line);
-
         if(line[0]=='1' && line[1]=='9')
         {    
             char *tok1 = strtok(line, " ");
             // long int rollnuber = atoi(tok1);
             char *tok = strtok(NULL, " ");
             short number_of_requests = atoi(tok);
-
-            // print_free_alloc_list();
             
             int memory_required =  sizeof(short) + 8 + number_of_requests*9 + sizeof(struct queue_element);
-            // printf("Requesting memory of size: %d\n", memory_required);
-            // getchar();
             void *ptr = Mem_Alloc(memory_required, 0);
-            printf("Ptr returned by Mem_Alloc: %p\n", ptr);
+
+            printf("Memory required: %d\n", memory_required);
+            // getchar();
             // print_free_alloc_list();
 
             if(ptr == NULL)
             {
-                printf("Main(): Mem_Alloc returned NULL\n");
+                printf("Main(): Mem_Alloc returned NULL for size (%d), request (%d - %s),\n", memory_required, number_of_requests, line);
+                // print_free_alloc_list();
+                // getchar();
                 break;
             }
 
@@ -91,27 +90,23 @@ void read_file()
         }
         else if (line[0] == '!')
         {
-            // Dequue the request from the queue
+            // Dequue the request from the queue if possible
             if(!(head==NULL) && !(tail==NULL))
             {
-                // printf("point1\n");
                 char *str_ptr = head->ptr;
                 short req_pending = *((short *)head->ptr);
                 
-                // printf("point2\n");
-
                 if(req_pending<=1)
                 {
                     void *ptr = head;
                     head = head->next;
-            //         printf("Freeing memory.\n");
+                    printf("Freeing memory.\n");
                     // getchar();
                     Mem_Free(ptr,0,0);
                     // print_free_alloc_list();
                 }
                 else
                 {
-                    printf("point3\n");
                     req_pending--;
                     *((short *)head->ptr) = req_pending;
                 }
@@ -119,7 +114,7 @@ void read_file()
         }
     }
 
-    print_queue();
+    // print_queue();
     
 }
 
@@ -128,7 +123,7 @@ void print_queue()
     struct queue_element *cur = head;
     printf("head of queue: %p\n", head);
 
-    for(int i=0; i<48 && cur != NULL; i++)
+    for(int i=0; i<1000 && cur != NULL; i++)
     {
 
         void *ptr = (void *)cur->ptr;
@@ -150,61 +145,60 @@ void print_queue()
 
 int main()
 {
-    Mem_Init(10*sysconf(_SC_PAGE_SIZE)); //initializing two pages
+    Mem_Init(1*sysconf(_SC_PAGE_SIZE)); //initializing two pages
 
-    // print_free_alloc_list();
 
-    // int i, j , c ;
-    // void* p[20];
+    void *ptr1 = Mem_Alloc(1, 0);
+    void *ptr2 = Mem_Alloc(2, 0);
+    void *ptr3 = Mem_Alloc(3, 0);
+    void *ptr4 = Mem_Alloc(4, 0);
+    void *ptr5 = Mem_Alloc(5, 0);
+    void *ptr6 = Mem_Alloc(6, 0);
+    void *ptr7 = Mem_Alloc(7, 0);
+    
 
-    // // algo goes here.
-    // for( j = 0 ; j < 10; j ++ )
-    // {
-    //     for(i = 0; i < 20; i++)
-    //     {
-    //         c = random();
-    //         c = c % 100;
-    //         // print_free_alloc_list();
-    //         printf("Requesting memory of size %d\n", c);
-    //         // getchar();
-    //         p[i] = Mem_Alloc(c,0);
-    //     }
+    Mem_Free(ptr2, 1, 0);
+    Mem_Free(ptr3, 1, 0);
+    Mem_Free(ptr1, 1, 0);
 
-    //     // print_free_alloc_list();
+    // test_my_code();
 
-    //     for(i = 19; i >= 0; i--)
-    //     {
-    //         // print_free_alloc_list();
-    //         // getchar();
-    //         Mem_Free(p[i],0,0); 
-    //     }
-
-    //     // print_free_alloc_list();
-    //     // getchar();
-    // }
-
-    read_file();
+    // read_file();
 
     print_free_alloc_list();
 
-    // void *ptr1 = Mem_Alloc(sizeof(int),0);
-    // void *ptr2 = Mem_Alloc(2*sizeof(int),0);
-    // void *ptr3 = Mem_Alloc(3*sizeof(int),0);
-    // void *ptr4 = Mem_Alloc(4*sizeof(int),0);
-    // void *ptr5 = Mem_Alloc(5*sizeof(int),0);
-
-    // print_free_alloc_list();
-
-    // Mem_Free(ptr2,0,0);
-    // print_free_alloc_list();
-
-    // Mem_Free(ptr4,0,0);
-    // print_free_alloc_list();
-
-    // void *ptr6 = Mem_Alloc(6*sizeof(int),0);
-    // void *ptr7 = Mem_Alloc(7*sizeof(int),0);
-
-    // print_free_alloc_list();
-
     return 0;
+}
+
+void test_my_code()
+{
+    int i, j , c ;
+    void* p[100];
+
+    // algo goes here.
+    for( j = 0 ; j < 10; j ++ )
+    {
+        for(i = 0; i < 100; i++)
+        {
+            c = random();
+            c = c % 100;
+            // print_free_alloc_list();
+            // printf("Requesting memory of size %d\n", c);
+            // getchar();
+            p[i] = Mem_Alloc(c,0);
+        }
+
+        // print_free_alloc_list();
+        // getchar();
+
+        for(i = 99; i >= 0; i--)
+        {
+            // print_free_alloc_list();
+            // getchar();
+            Mem_Free(p[i],0,0); 
+        }
+
+        // print_free_alloc_list();
+        // getchar();
+    }
 }

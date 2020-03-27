@@ -18,7 +18,7 @@ void test_my_code();
 
 void read_file()
 {
-    FILE *file = fopen("test1.txt", "r");
+    FILE *file = fopen("test3.txt", "r");
 
     char line[12];
     fgets(line, 12, file);
@@ -45,8 +45,8 @@ void read_file()
             if(ptr == NULL)
             {
                 printf("Main(): Mem_Alloc returned NULL for size (%d), request (%d - %s),\n", memory_required, number_of_requests, line);
-                // print_free_alloc_list();
-                // getchar();
+                Mem_Dump();
+                getchar();
                 break;
             }
 
@@ -102,7 +102,7 @@ void read_file()
                     head = head->next;
                     printf("Freeing memory.\n");
                     // getchar();
-                    Mem_Free(ptr,0,0);
+                    Mem_Free(ptr,1,0);
                     // print_free_alloc_list();
                 }
                 else
@@ -156,16 +156,15 @@ int main()
     void *ptr6 = Mem_Alloc(6, 0);
     void *ptr7 = Mem_Alloc(7, 0);
     
-
-    Mem_Free(ptr2, 1, 0);
-    Mem_Free(ptr3, 1, 0);
-    Mem_Free(ptr1, 1, 0);
+    Mem_Free(ptr4, 1, 0);
+    Mem_Free(ptr6, 1, 0);
+    Mem_Free(ptr5, 1, 0);
 
     // test_my_code();
 
     // read_file();
 
-    print_free_alloc_list();
+    Mem_Dump();
 
     return 0;
 }

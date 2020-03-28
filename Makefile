@@ -1,2 +1,4 @@
 test_make: main.c
-	gcc main.c -o make_main 
+	gcc -c -fpic mem.c -Wall -Werror
+	gcc -shared -o libmem.so mem.o
+	gcc -L./ -Wl,-rpath=./ -o main main.c -Wall -Werror -lmem

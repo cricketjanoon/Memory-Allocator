@@ -4,9 +4,7 @@
 #include <string.h>
 #include "mem.h"
 
-
-struct queue_element 
-{
+struct queue_element {
     struct queue_element *next;
     void *ptr;
 };
@@ -14,11 +12,36 @@ struct queue_element
 struct queue_element *head=NULL, *tail=NULL;
 
 void print_queue();
-void test_my_code();
+void rigorous_testing();
+void read_file();
+
+int main()
+{
+    Mem_Init(1*sysconf(_SC_PAGE_SIZE)); 
+
+
+    void *ptr1 = Mem_Alloc(10, 0);
+     void *ptr2 = Mem_Alloc(4030, 0);
+    // Mem_Free(ptr1, 0, 0);
+    void *ptr3 = Mem_Alloc(10, 1);
+    // // Mem_Dump();
+    // void *ptr2 = Mem_Alloc(4039, 1);
+    // // Mem_Dump();
+    // void *ptr3 = Mem_Alloc(1, 1);
+    // Mem_Alloc(10,1);
+    // rigorous_testing();
+
+    // read_file();
+
+
+    Mem_Dump();
+
+    return 0;
+}
 
 void read_file()
 {
-    FILE *file = fopen("test3.txt", "r");
+    FILE *file = fopen("test2.txt", "r");
 
     char line[12];
     fgets(line, 12, file);
@@ -36,9 +59,9 @@ void read_file()
             short number_of_requests = atoi(tok);
             
             int memory_required =  sizeof(short) + 8 + number_of_requests*9 + sizeof(struct queue_element);
-            void *ptr = Mem_Alloc(memory_required, 0);
+            void *ptr = Mem_Alloc(memory_required, 1);
 
-            printf("Memory required: %d\n", memory_required);
+            // printf("Memory required: %d\n", memory_required);
             // getchar();
             // print_free_alloc_list();
 
@@ -100,7 +123,7 @@ void read_file()
                 {
                     void *ptr = head;
                     head = head->next;
-                    printf("Freeing memory.\n");
+                    // printf("Freeing memory.\n");
                     // getchar();
                     Mem_Free(ptr,1,0);
                     // print_free_alloc_list();
@@ -114,8 +137,7 @@ void read_file()
         }
     }
 
-    // print_queue();
-    
+    // print_queue();    
 }
 
 void print_queue()
@@ -142,62 +164,22 @@ void print_queue()
     }
 }
 
-
-int main()
+void rigorous_testing()
 {
-    Mem_Init(1*sysconf(_SC_PAGE_SIZE)); //initializing two pages
-
-
-    void *ptr1 = Mem_Alloc(1, 0);
-    void *ptr2 = Mem_Alloc(2, 0);
-    void *ptr3 = Mem_Alloc(3, 0);
-    void *ptr4 = Mem_Alloc(4, 0);
-    void *ptr5 = Mem_Alloc(5, 0);
-    void *ptr6 = Mem_Alloc(6, 0);
-    void *ptr7 = Mem_Alloc(7, 0);
-    
-    Mem_Free(ptr4, 1, 0);
-    Mem_Free(ptr6, 1, 0);
-    Mem_Free(ptr5, 1, 0);
-
-    // test_my_code();
-
-    // read_file();
-
-    Mem_Dump();
-
-    return 0;
-}
-
-void test_my_code()
-{
-    int i, j , c ;
     void* p[100];
 
-    // algo goes here.
-    for( j = 0 ; j < 10; j ++ )
+    for(int j = 0 ; j < 10; j ++ )
     {
-        for(i = 0; i < 100; i++)
+        for(int i = 0; i < 100; i++)
         {
-            c = random();
+            int c = random();
             c = c % 100;
-            // print_free_alloc_list();
-            // printf("Requesting memory of size %d\n", c);
-            // getchar();
             p[i] = Mem_Alloc(c,0);
         }
 
-        // print_free_alloc_list();
-        // getchar();
-
-        for(i = 99; i >= 0; i--)
+        for(int i = 99; i >= 0; i--)
         {
-            // print_free_alloc_list();
-            // getchar();
-            Mem_Free(p[i],0,0); 
+            Mem_Free(p[i],1,0); 
         }
-
-        // print_free_alloc_list();
-        // getchar();
     }
 }

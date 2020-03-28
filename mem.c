@@ -1,14 +1,10 @@
 #include <sys/mman.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "mem.h"
 
 //to print out extra logs
 int DEBUG = 0;
-
-struct header{
-    int size;
-    struct header *next;
-};
 
 void log_address(char *s, void *ptr)
 {
@@ -28,21 +24,25 @@ void *Mem_Init(int sizeOfRegion)
     else
     {
         //at the start of memory I am storing ref to 2 list(free mem list and allocated mem list)
-        struct header **free_list = (struct header **)head_ptr;
-        struct header **alloc_list = (struct header **)(head_ptr + sizeof(struct header **));
+        struct header **mem_chunck_list = (struct header **)head_ptr;
+        struct header **free_list = (struct header **)(head_ptr + sizeof(struct header **));
+        struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
         
+        //at this moment only one chuck
+        *mem_chunck_list = NULL;
+
         //because nothing allocated yet
         *alloc_list = NULL; 
 
         //creating first free block
-        struct header *first_free_block =  head_ptr + 2*sizeof(struct header **);
-        first_free_block->size =sizeOfRegion-2*sizeof(struct header **)-sizeof(struct header);        
+        struct header *first_free_block =  head_ptr + 3*sizeof(struct header **);
+        first_free_block->size =sizeOfRegion-3*sizeof(struct header **)-sizeof(struct header);        
         first_free_block->next  = NULL;
 
         *free_list = first_free_block;
         
-        log_address("Mem_Init(free_list)", *free_list);
-        log_address("Mem_Init(alloc_list)", *alloc_list);
+        if(DEBUG)
+            printf("Mem_Init(): (mmap_chuncks): %p, (free_list): %p, (alloc_list): %p\n", *mem_chunck_list, *free_list, *alloc_list);
 
         return head_ptr;
     }
@@ -53,8 +53,8 @@ int Mem_Free(void *ptr, int coalesce, int release)
     if(ptr == NULL)
         return 0;
 
-    struct header **free_list = (struct header **)head_ptr;
-    struct header **alloc_list = (struct header **)(head_ptr + sizeof(struct header **));
+    struct header **free_list = (struct header **)(head_ptr + sizeof(struct header **));
+    struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
 
     //getting the address where the header starts
     struct header *block_to_free = ptr - sizeof(struct header);
@@ -89,7 +89,12 @@ int Mem_Free(void *ptr, int coalesce, int release)
         if(DEBUG)
             printf("Mem_Free: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
     }
-
+    else
+    {
+        printf("Mem_Free: Could not free memory, invalid pointer.\n");
+        return -1;
+    }
+    
     //because recently freed block is added to the front of the list
     struct header *freed_block = *free_list;
 
@@ -133,6 +138,7 @@ int Mem_Free(void *ptr, int coalesce, int release)
         //TODO
     }
 
+    return 0;
 }
 
 void *Mem_Alloc(int size, int expand)
@@ -140,26 +146,35 @@ void *Mem_Alloc(int size, int expand)
     //if user request memory of size 0 or less
     if(size <= 0)
         return NULL;
+    
 
-    struct header **free_list = (struct header **)head_ptr;
-    struct header **alloc_list = (struct header **)(head_ptr + sizeof(struct header **));
+    struct header **mem_chunck_list;
+    struct header **free_list;
+    struct header **alloc_list;
+
+    retry_allocation:
+    mem_chunck_list = (struct header **)head_ptr;
+    free_list = (struct header **)(head_ptr + sizeof(struct header **));
+    alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
+
 
     struct header *next_free_block;
     struct header *new_free_block;
     struct header *prev_free_block;
     struct header *cur_free_block;
 
+
     //find the next suitable block by traversing the free list
     cur_free_block = *free_list;
     prev_free_block = *free_list;
 
-    while(/*(cur_free_block->size != size || cur_free_block->size < size + sizeof(struct header)) && */cur_free_block->next)
+    while(/*(cur_free_block->size != size || cur_free_block->size < size + sizeof(struct header)) && */ cur_free_block && cur_free_block->next)
     {
-        /*if (cur_free_block->size == size)
+        if (cur_free_block->size == size)
         {
             break;
         }
-        else*/ if(cur_free_block->size >= (size + sizeof(struct header)))
+        else if(cur_free_block->size >= (size + sizeof(struct header)))
         {
             break;
         }
@@ -170,7 +185,7 @@ void *Mem_Alloc(int size, int expand)
         }
     }
 
-    if((cur_free_block->size >= (size + sizeof(struct header))) || (cur_free_block->size == size))
+    if(cur_free_block && ((cur_free_block->size >= (size + sizeof(struct header))) || (cur_free_block->size == size)))
     {
         next_free_block = cur_free_block->next;
 
@@ -262,10 +277,36 @@ void *Mem_Alloc(int size, int expand)
         if(expand)
         {
             //TODO: handle the case of memory expansion
+            int required_size = size + 2*sizeof(struct header);
+            int page_size = sysconf(_SC_PAGE_SIZE);
+            int new_mem_size = page_size + required_size;
+            int a = new_mem_size % page_size;
+            new_mem_size = new_mem_size - a;
+
+            void *new_chunck = mmap(NULL, new_mem_size, PROT_READ| PROT_WRITE , MAP_PRIVATE | MAP_ANON , -1 , 0);
+
+            struct header *chunck_header = new_chunck;
+            chunck_header->size = new_mem_size; //original chuck size excluding size of headers
+
+            if(*mem_chunck_list == NULL) //means first extra chunck
+            {
+                *mem_chunck_list = chunck_header;
+            } 
+            else //already have extra chucks
+            {
+                chunck_header->next = *mem_chunck_list;
+                *mem_chunck_list = chunck_header;
+            }
+
+            struct header *new_free_block = new_chunck + sizeof(struct header);
+            new_free_block->size = new_mem_size - 2*sizeof(struct header);
+            new_free_block->next = *free_list;
+            *free_list = new_free_block;
+            goto retry_allocation;
         }
         else
         {
-            printf("Mem_Alloc(): Cannot provide more memory.\n");
+            printf("Mem_Alloc(expand=0): Cannot provide memory of %d bytes.\n", size);
             return NULL;
         }
     }
@@ -273,10 +314,12 @@ void *Mem_Alloc(int size, int expand)
 
 void Mem_Dump()
 {
-    struct header **free_list = (struct header **)head_ptr;
-    struct header **alloc_list = (struct header **)(head_ptr + sizeof(struct header **));
+    struct header **mem_chunck_list = (struct header **)head_ptr;
+    struct header **free_list = (struct header **)(head_ptr+sizeof(struct header **));
+    struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
 
-    printf("----------Free List (head: %p)------------\n", *free_list);
+    printf("----------Free List (head: %p)-------------", *free_list);
+    if(*free_list == NULL) printf("---------\n"); else printf("\n");
     struct header *cur = *free_list;
     while(cur)
     {
@@ -285,7 +328,8 @@ void Mem_Dump()
     }
     printf("-------------------------------------------------------\n");
 
-    printf("-------Allocated List (head: %p)----------\n", *alloc_list);
+    printf("-------Allocated List (head: %p)-----------", *alloc_list);
+    if(*alloc_list == NULL) printf("---------\n"); else printf("\n");
     cur = *alloc_list;
     while(cur)
     {
@@ -294,6 +338,17 @@ void Mem_Dump()
     }
     printf("-------------------------------------------------------\n");
 
+    printf("--------Chunck List (head: %p)-------------", *mem_chunck_list); 
+    if(*mem_chunck_list == NULL) printf("---------\n"); else printf("\n");
+    cur = *mem_chunck_list;
+    while(cur)
+    {
+        printf("Address: %p, Size: %d, Next: %p\n", cur, cur->size, cur->next);
+        cur = cur->next;
+    }
+    printf("-------------------------------------------------------\n");
+
+    log_address("PRINT(mem_chunck_list", *mem_chunck_list);
     log_address("PRINT(free_list)", *free_list);
     log_address("PRINT(alloc_list)", *alloc_list);
 

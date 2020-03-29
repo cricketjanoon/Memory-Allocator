@@ -221,16 +221,17 @@ void *Mem_Alloc(int size, int expand)
     struct header *prev_free_block;
     struct header *cur_free_block;
 
+
     //find the next suitable block by traversing the free list
     cur_free_block = *free_list;
     prev_free_block = *free_list;
     while(cur_free_block && cur_free_block->next)
     {
-        /*if (cur_free_block->size == size)
+        if (cur_free_block->size == size)
         {
             break;
         }
-        else*/ if(cur_free_block->size >= (size + sizeof(struct header)))
+        else if(cur_free_block->size >= size + sizeof(struct header))
         {
             break;
         }
@@ -241,76 +242,48 @@ void *Mem_Alloc(int size, int expand)
         }
     }
 
-    if(cur_free_block && ((cur_free_block->size >= (size + sizeof(struct header)))/* || (cur_free_block->size == size)*/))
+    if(cur_free_block && ((cur_free_block->size >= (size + sizeof(struct header))) || (cur_free_block->size == size)))
     {
         next_free_block = cur_free_block->next;
 
         //if found block has excess memory than required
-        if(cur_free_block->size > size + sizeof(struct header))
+        if(cur_free_block->size >= size + sizeof(struct header))
         {
-            // printf("point1\n");
-            // Mem_Dump();
-            // getchar();
             new_free_block = (struct header *) ((void *)cur_free_block + size + sizeof(struct header));
             new_free_block->size = cur_free_block->size-size-sizeof(struct header);
             new_free_block->next = next_free_block;
 
-            // printf("new_free_block->size: %d\n", new_free_block->size);
-
             if(cur_free_block == prev_free_block) //means what we had only one block
             {
                 *free_list = new_free_block; 
-                // printf("point2\n");
-                // Mem_Dump();
-                // getchar();
             }
             else
             {
-                // printf("point3\n");
-                // Mem_Dump();
-                // getchar();
                 prev_free_block->next = new_free_block;
             }
         }
-        else //if(cur_free_block->size == size) //found block has exactly the same memory
+        else //found block has exactly the same memory
         {
-            // printf("point4\n");
-            // Mem_Dump();
-            // getchar();
-            // printf("ooolim\n");
-            // printf("found block exatcly the same size.\n");
             if(cur_free_block == prev_free_block)
             {
-                // printf("point5\n");
-                // Mem_Dump();
-                // getchar();
                 *free_list = next_free_block;
             }
             else
             {
-                // printf("point6\n");
-                // Mem_Dump();
-                // getchar();
                 prev_free_block->next = next_free_block;
             }
         }
         
-        //Now adding the given memory to allocated-list
+        //Now adding the given memory block to allocated-list
         cur_free_block->size = size;
 
         if(*alloc_list==NULL)
         {
-            // printf("point7\n");
-            // Mem_Dump();
-            // getchar();
             *alloc_list=cur_free_block;
             cur_free_block->next = NULL;
         }
         else //adding new block to the front of the list
         {
-            // printf("point8\n");
-            // Mem_Dump();
-            // getchar();
             cur_free_block->next = *alloc_list;
             *alloc_list = cur_free_block;
         }
@@ -321,10 +294,6 @@ void *Mem_Alloc(int size, int expand)
             printf("Mem_Alloc: free_list(%p), alloc_list(%p)\n", *free_list, *alloc_list);
         }
 
-        // printf("point9\n");
-        // Mem_Dump();
-        // getchar();
-        // printf("cur_free_block->size: %d\n", cur_free_block->size);
         return (void *)cur_free_block + sizeof(struct header);
 
     }

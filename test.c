@@ -45,14 +45,11 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-
-    char *filename = "test2.txt";
-    read_file_process_requests(filename, 0,0,0);
+    char *filename = "test1.txt";
+    read_file_process_requests(filename, 1,1,1);
 
     Mem_Dump();
 
-    
-    // rigorous_testing();
     return 0;
 }
 
@@ -81,12 +78,14 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
             short number_of_requests = atoi(tok);
             
             int memory_required =  sizeof(short) + 8 + number_of_requests*9 + sizeof(struct queue_element);
+
             void *ptr = Mem_Alloc(memory_required, expand);
+
 
             if(ptr == NULL)
             {
                 printf("Main(): Mem_Alloc returned NULL for size (%d), request (%d - %s),\n", memory_required, number_of_requests, line);
-                break;
+                continue;
             }
 
             //adding element to the queue
@@ -120,7 +119,7 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
             char *req_ptr = (char *)cur_ptr;
             for(int i=0; i<number_of_requests; i++)
             {
-                fgets(line, 12, file);
+                fgets(line, 9, file);
                 strtok(line, "\n");
                 strcpy(req_ptr, line);
                 req_ptr +=9;
@@ -146,6 +145,7 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
                 //process the request and decrement it's count
                 else
                 {
+                    //TODO: process the request
                     req_pending--;
                     *((short *)head->ptr) = req_pending;
                 }

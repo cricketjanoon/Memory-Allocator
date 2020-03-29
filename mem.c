@@ -6,24 +6,18 @@
 //to print out extra logs
 int DEBUG = 0;
 
-void log_address(char *s, void *ptr)
-{
-    if(DEBUG)
-       printf("%s: %p\n", s, ptr);
-}
-
 void *Mem_Init(int sizeOfRegion)
 {
     head_ptr = mmap(NULL, sizeOfRegion, PROT_READ| PROT_WRITE , MAP_PRIVATE | MAP_ANON , -1 , 0);
 
     if(head_ptr == MAP_FAILED)
     {
-        printf("Mem_Init(): Requested memory cannot be assigned.\n");
+        printf("Mem_Init(): mmap returned NULL.\n");
         return NULL;
     }
     else
     {
-        //at the start of memory I am storing ref to 2 list(free mem list and allocated mem list)
+        //at the start of memory I am storing ref to 3 listS(mem_chuncks(by mmap), free_list and alloc_list)
         struct header **mem_chunck_list = (struct header **)head_ptr;
         struct header **free_list = (struct header **)(head_ptr + sizeof(struct header **));
         struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
@@ -53,6 +47,7 @@ int Mem_Free(void *ptr, int coalesce, int release)
     if(ptr == NULL)
         return 0;
 
+    //getting references to the heads of three lists
     struct header **mem_chunck_list = (struct header **)head_ptr;
     struct header **free_list = (struct header **)(head_ptr + sizeof(struct header **));
     struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
@@ -92,11 +87,11 @@ int Mem_Free(void *ptr, int coalesce, int release)
     }
     else
     {
+        //cases when pointer is not assigned by Mem_Alloc()
         printf("Mem_Free: Could not free memory, invalid pointer.\n");
         return -1;
     }
     
-
     if(coalesce)
     {
         //because recently freed block is added to the front of the list
@@ -133,7 +128,6 @@ int Mem_Free(void *ptr, int coalesce, int release)
             prev_block = cur_block;
             cur_block = cur_block->next;
         }
-
     }
 
     if(release)
@@ -215,6 +209,8 @@ void *Mem_Alloc(int size, int expand)
     struct header **alloc_list;
 
     retry_allocation:
+
+    //getting references of the lists
     mem_chunck_list = (struct header **)head_ptr;
     free_list = (struct header **)(head_ptr + sizeof(struct header **));
     alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
@@ -225,12 +221,10 @@ void *Mem_Alloc(int size, int expand)
     struct header *prev_free_block;
     struct header *cur_free_block;
 
-
     //find the next suitable block by traversing the free list
     cur_free_block = *free_list;
     prev_free_block = *free_list;
-
-    while(/*(cur_free_block->size != size || cur_free_block->size < size + sizeof(struct header)) && */ cur_free_block && cur_free_block->next)
+    while(cur_free_block && cur_free_block->next)
     {
         if (cur_free_block->size == size)
         {
@@ -338,7 +332,7 @@ void *Mem_Alloc(int size, int expand)
     {
         if(expand)
         {
-            //TODO: handle the case of memory expansion
+            //calculating the page aligned size for new memory allocation
             int required_size = size + 2*sizeof(struct header);
             int page_size = sysconf(_SC_PAGE_SIZE);
             int new_mem_size = page_size + required_size;
@@ -348,7 +342,7 @@ void *Mem_Alloc(int size, int expand)
             void *new_chunck = mmap(NULL, new_mem_size, PROT_READ| PROT_WRITE , MAP_PRIVATE | MAP_ANON , -1 , 0);
 
             struct header *chunck_header = new_chunck;
-            chunck_header->size = new_mem_size; //original chuck size excluding size of headers
+            chunck_header->size = new_mem_size; //original chuck size as given by mmap() (excluding size of headers)
 
             if(*mem_chunck_list == NULL) //means first extra chunck
             {
@@ -361,10 +355,13 @@ void *Mem_Alloc(int size, int expand)
                 *mem_chunck_list = chunck_header;
             }
 
+            //creating new free block on newly allocated chunck
             struct header *new_free_block = new_chunck + sizeof(struct header);
             new_free_block->size = new_mem_size - 2*sizeof(struct header);
             new_free_block->next = *free_list;
             *free_list = new_free_block;
+
+            //now that new memory is allocated, try allocating the memory again
             goto retry_allocation;
         }
         else
@@ -410,56 +407,4 @@ void Mem_Dump()
         cur = cur->next;
     }
     printf("-------------------------------------------------------\n");
-
-    log_address("PRINT(mem_chunck_list", *mem_chunck_list);
-    log_address("PRINT(free_list)", *free_list);
-    log_address("PRINT(alloc_list)", *alloc_list);
-
 }
-
-
-// void hexDump(char *desc, void *addr, int len) 
-// {
-//     int i;
-//     unsigned char buff[17];
-//     unsigned char *pc = (unsigned char*)addr;
-
-//     // Output description if given.
-//     if (desc != NULL)
-//         printf ("%s:\n", desc);
-
-//     // Process every byte in the data.
-//     for (i = 0; i < len; i++) {
-//         // Multiple of 16 means new line (with line offset).
-
-//         if ((i % 16) == 0) {
-//             // Just don't print ASCII for the zeroth line.
-//             if (i != 0)
-//                 printf("  %s\n", buff);
-
-//             // Output the offset.
-//             printf("  %04x ", i);
-//         }
-
-//         // Now the hex code for the specific character.
-//         printf(" %02x", pc[i]);
-
-//         // And store a printable ASCII character for later.
-//         if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
-//             buff[i % 16] = '.';
-//         } else {
-//             buff[i % 16] = pc[i];
-//         }
-
-//         buff[(i % 16) + 1] = '\0';
-//     }
-
-//     // Pad out last line if not exactly 16 characters.
-//     while ((i % 16) != 0) {
-//         printf("   ");
-//         i++;
-//     }
-
-//     // And print the final ASCII bit.
-//     printf("  %s\n", buff);
-// }

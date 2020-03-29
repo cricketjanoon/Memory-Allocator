@@ -11,50 +11,41 @@ struct queue_element {
 
 struct queue_element *head=NULL, *tail=NULL;
 
-void print_queue();
+void print_requests_queue();
 void rigorous_testing();
-void read_file();
+void read_file_process_requests(char *filename,  int expand, int coalesce, int release);
 
-int main()
+int main(int argc, char *argv[])
 {
-    Mem_Init(1*sysconf(_SC_PAGE_SIZE)); 
 
+    if(argc<2)
+    {
+        printf("Pleasep provide number of pages to initialize in cmd line argument. \n");;
+        return 0;
+    }
 
-    void *ptr1 = Mem_Alloc(10, 0);
-    void *ptr2 = Mem_Alloc(4030, 0);
-    void *ptr3 = Mem_Alloc(1, 1);
-    void *ptr4 = Mem_Alloc(4048, 1);
-    Mem_Alloc(5000, 1);
-    Mem_Alloc(5000, 1);
-    Mem_Alloc(5000, 1);
-    
-    
-    ptr1 = ptr1;
-    ptr2 = ptr2;
-    ptr3 = ptr3;
-    ptr4 = ptr4;
-    
-    Mem_Free(ptr3, 1, 0);
-    Mem_Free(ptr4, 1, 0);
+    int number_of_pages = atoi(argv[1]);
+    int sizeOfRegion = number_of_pages*sysconf(_SC_PAGE_SIZE);
 
-    // // Mem_Dump();
-    // void *ptr2 = Mem_Alloc(4039, 1);
-    // // Mem_Dump();
-    // void *ptr3 = Mem_Alloc(1, 1);
-    // Mem_Alloc(10,1);
+    Mem_Init(sizeOfRegion); 
+
     // rigorous_testing();
 
-    // read_file();
-
+    char *filename = "test1.txt";
+    read_file_process_requests(filename, 1,1,1);
 
     Mem_Dump();
-
     return 0;
 }
 
-void read_file()
+void read_file_process_requests(char *filename, int expand, int coalesce, int release)
 {
-    FILE *file = fopen("test1.txt", "r");
+    FILE *file = fopen(filename, "r");
+    if(file == NULL)
+    {    
+        printf("Error opening the file: \"%s\"\n", filename);
+        return;
+    }
 
     char line[12];
     fgets(line, 12, file);
@@ -66,31 +57,22 @@ void read_file()
 
         if(line[0]=='1' && line[1]=='9')
         {    
-            char *tok1 = strtok(line, " ");
+            char *rollnumber_str = strtok(line, " ");
             // long int rollnuber = atoi(tok1);
             char *tok = strtok(NULL, " ");
             short number_of_requests = atoi(tok);
             
             int memory_required =  sizeof(short) + 8 + number_of_requests*9 + sizeof(struct queue_element);
-            void *ptr = Mem_Alloc(memory_required, 1);
-
-            // printf("Memory required: %d\n", memory_required);
-            // getchar();
-            // print_free_alloc_list();
+            void *ptr = Mem_Alloc(memory_required, expand);
 
             if(ptr == NULL)
             {
                 printf("Main(): Mem_Alloc returned NULL for size (%d), request (%d - %s),\n", memory_required, number_of_requests, line);
-                Mem_Dump();
-                getchar();
                 break;
             }
 
-            struct queue_element *node_ptr = (struct queue_element *)ptr;
-            // struct queue_element node;
-            // *node_ptr = node;
-
             //adding element to the queue
+            struct queue_element *node_ptr = (struct queue_element *)ptr;
             if(head==NULL && tail==NULL) //if the first node of the queue
             {   
                 tail = node_ptr;
@@ -107,15 +89,17 @@ void read_file()
             char *cur_ptr = ptr + sizeof(struct queue_element);
             node_ptr->ptr = cur_ptr;
 
+            //copying the number of request to the memory
             short *req_ptr_1 = (short *)cur_ptr;
             *req_ptr_1 = number_of_requests;
             cur_ptr +=2; // for short
             
-            strcpy(cur_ptr, tok1);
+            //copying the rollnumber to the memory
+            strcpy(cur_ptr, rollnumber_str);
             cur_ptr += 8;
 
+            //copying the requests to the memory
             char *req_ptr = (char *)cur_ptr;
-
             for(int i=0; i<number_of_requests; i++)
             {
                 fgets(line, 12, file);
@@ -127,20 +111,21 @@ void read_file()
         else if (line[0] == '!')
         {
             // Dequue the request from the queue if possible
-            if(!(head==NULL) && !(tail==NULL))
+            if(head!=NULL && tail!=NULL)
             {
-                // char *str_ptr = head->ptr;
                 short req_pending = *((short *)head->ptr);
                 
+                //its time to remove the user with all its requests processed
                 if(req_pending<=1)
                 {
                     void *ptr = head;
                     head = head->next;
-                    // printf("Freeing memory.\n");
-                    // getchar();
-                    Mem_Free(ptr,1,0);
-                    // print_free_alloc_list();
+                    int return_value = Mem_Free(ptr,1,1);
+
+                    if(return_value == -1)
+                        printf("Mem_Free(): Could not free the memory.");
                 }
+                //process the request and decrement it's count
                 else
                 {
                     req_pending--;
@@ -150,10 +135,10 @@ void read_file()
         }
     }
 
-    // print_queue();    
+    print_requests_queue();    
 }
 
-void print_queue()
+void print_requests_queue()
 {
     struct queue_element *cur = head;
     printf("head of queue: %p\n", head);
@@ -187,12 +172,12 @@ void rigorous_testing()
         {
             int c = random();
             c = c % 100;
-            p[i] = Mem_Alloc(c,0);
+            p[i] = Mem_Alloc(c,1);
         }
 
         for(int i = 99; i >= 0; i--)
         {
-            Mem_Free(p[i],1,0); 
+            Mem_Free(p[i],1,1); 
         }
     }
 }

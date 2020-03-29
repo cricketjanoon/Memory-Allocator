@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    char *filename = "test1.txt";
+    char *filename = "test3.txt";
     read_file_process_requests(filename, 1,1,1);
 
     Mem_Dump();
@@ -159,7 +159,7 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
 void print_requests_queue()
 {
     struct queue_element *cur = head;
-    printf("head of queue: %p\n", head);
+    printf("----------------------head of queue: (%p)----------------------\n", head);
 
     for(int i=0; i<1000 && cur != NULL; i++)
     {
@@ -168,16 +168,19 @@ void print_requests_queue()
 
         short req_pending = *((short *)cur->ptr);
         printf("addr: %p, next: %p, ptr: %p, ", cur, cur->next, cur->ptr);
-        printf("%d-", req_pending);
 
+        printf("(");
         char *str_ptr = ptr + 2;
         for(int k=0; k<8; k++)
         {
             printf("%c", str_ptr[k]);
         }
+        printf("% d", req_pending);
+        printf(")");
         printf("\n");
         cur = cur->next;
     }
+    printf("---------------------------------------------------------------------------\n");
 }
 
 void rigorous_testing()

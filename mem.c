@@ -53,6 +53,7 @@ int Mem_Free(void *ptr, int coalesce, int release)
     if(ptr == NULL)
         return 0;
 
+    struct header **mem_chunck_list = (struct header **)head_ptr;
     struct header **free_list = (struct header **)(head_ptr + sizeof(struct header **));
     struct header **alloc_list = (struct header **)(head_ptr + 2*sizeof(struct header **));
 
@@ -95,11 +96,12 @@ int Mem_Free(void *ptr, int coalesce, int release)
         return -1;
     }
     
-    //because recently freed block is added to the front of the list
-    struct header *freed_block = *free_list;
 
     if(coalesce)
-    {   
+    {
+        //because recently freed block is added to the front of the list
+        struct header *freed_block = *free_list;
+
         //traverse the list and find if adjacents blocks are free to coalesce
         struct header *cur_block = (*free_list)->next;
         struct header *prev_block = *free_list;
@@ -133,9 +135,70 @@ int Mem_Free(void *ptr, int coalesce, int release)
         }
 
     }
+
     if(release)
     {
-        //TODO
+        int _continue;
+
+        struct header *cur_chunck = *mem_chunck_list, *prev_chunck = *mem_chunck_list;
+        while(cur_chunck)
+        {
+            struct header *possible_free_block = (void *)cur_chunck + sizeof(struct header);
+            struct header *cur_free_block = *free_list, *prev_free_block=*free_list;
+            _continue = 0;
+
+            while (cur_free_block)
+            {
+                //check if the there is any free block which is entirely on the free_chunck
+                if(cur_free_block == possible_free_block && cur_free_block->size == cur_chunck->size-2*sizeof(struct header))
+                {
+                    void *mem_to_unmap = cur_chunck;
+                    int length = cur_chunck->size;
+
+                    //ditching the free chunck from mem_chunck_list
+                    if(cur_chunck == prev_chunck) 
+                    { 
+                        *mem_chunck_list = cur_chunck->next;
+                        cur_chunck = *mem_chunck_list;
+                        prev_chunck = *mem_chunck_list;
+                    }
+                    else
+                    {
+                        prev_chunck->next = cur_chunck->next;
+                        cur_chunck=prev_chunck->next;
+                    }                        
+                    _continue = 1;
+
+                    //ditching the free block from free_list
+                    if(prev_free_block == cur_free_block) 
+                    {
+                        *free_list = cur_free_block->next;
+                        cur_free_block = *free_list;
+                        prev_free_block = *free_list;
+                    }
+                    else
+                    {
+                        prev_free_block->next = cur_free_block->next;
+                        cur_free_block = prev_free_block->next;
+                    }
+
+                    //unmapping the memory
+                    munmap(mem_to_unmap, length);
+                }
+                else
+                {
+                    prev_free_block=cur_free_block;
+                    cur_free_block = cur_free_block->next;
+                }
+                
+            }
+            
+            if(_continue)
+                continue;
+
+            prev_chunck = cur_chunck;
+            cur_chunck = cur_chunck->next;
+        }
     }
 
     return 0;
@@ -147,7 +210,6 @@ void *Mem_Alloc(int size, int expand)
     if(size <= 0)
         return NULL;
     
-
     struct header **mem_chunck_list;
     struct header **free_list;
     struct header **alloc_list;
@@ -290,6 +352,7 @@ void *Mem_Alloc(int size, int expand)
 
             if(*mem_chunck_list == NULL) //means first extra chunck
             {
+                chunck_header->next = NULL;
                 *mem_chunck_list = chunck_header;
             } 
             else //already have extra chucks

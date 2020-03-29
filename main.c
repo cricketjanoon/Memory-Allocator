@@ -21,9 +21,22 @@ int main()
 
 
     void *ptr1 = Mem_Alloc(10, 0);
-     void *ptr2 = Mem_Alloc(4030, 0);
-    // Mem_Free(ptr1, 0, 0);
-    void *ptr3 = Mem_Alloc(10, 1);
+    void *ptr2 = Mem_Alloc(4030, 0);
+    void *ptr3 = Mem_Alloc(1, 1);
+    void *ptr4 = Mem_Alloc(4048, 1);
+    Mem_Alloc(5000, 1);
+    Mem_Alloc(5000, 1);
+    Mem_Alloc(5000, 1);
+    
+    
+    ptr1 = ptr1;
+    ptr2 = ptr2;
+    ptr3 = ptr3;
+    ptr4 = ptr4;
+    
+    Mem_Free(ptr3, 1, 0);
+    Mem_Free(ptr4, 1, 0);
+
     // // Mem_Dump();
     // void *ptr2 = Mem_Alloc(4039, 1);
     // // Mem_Dump();
@@ -41,11 +54,11 @@ int main()
 
 void read_file()
 {
-    FILE *file = fopen("test2.txt", "r");
+    FILE *file = fopen("test1.txt", "r");
 
     char line[12];
     fgets(line, 12, file);
-    int totalUsers = atoi(line);
+    // int totalUsers = atoi(line);
 
     while(fgets(line, 12, file) != NULL)
     {
@@ -74,8 +87,8 @@ void read_file()
             }
 
             struct queue_element *node_ptr = (struct queue_element *)ptr;
-            struct queue_element node;
-            *node_ptr = node;
+            // struct queue_element node;
+            // *node_ptr = node;
 
             //adding element to the queue
             if(head==NULL && tail==NULL) //if the first node of the queue
@@ -116,7 +129,7 @@ void read_file()
             // Dequue the request from the queue if possible
             if(!(head==NULL) && !(tail==NULL))
             {
-                char *str_ptr = head->ptr;
+                // char *str_ptr = head->ptr;
                 short req_pending = *((short *)head->ptr);
                 
                 if(req_pending<=1)

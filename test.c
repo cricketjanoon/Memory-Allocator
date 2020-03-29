@@ -24,17 +24,35 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    int number_of_pages = atoi(argv[1]);
-    int sizeOfRegion = number_of_pages*sysconf(_SC_PAGE_SIZE);
+    int user_entered_size = atoi(argv[1]);
+    if(user_entered_size <= 0)
+    {
+        printf("Please enter size greater than zero.\n");
+        return 0;
+    }
 
-    Mem_Init(sizeOfRegion); 
+    //calculate the page aligned size
+    int page_size = sysconf(_SC_PAGE_SIZE);
+    int new_mem_size = page_size + user_entered_size;
+    int a = new_mem_size % page_size;
+    int page_aligned_size = new_mem_size - a;
 
-    // rigorous_testing();
 
-    char *filename = "test1.txt";
-    read_file_process_requests(filename, 1,1,1);
+    void *head = Mem_Init(page_aligned_size); 
+    if(head == NULL)
+    {
+        printf("Mem_Init() return NULL.\n");
+        return 0;
+    }
+
+
+    char *filename = "test2.txt";
+    read_file_process_requests(filename, 0,0,0);
 
     Mem_Dump();
+
+    
+    // rigorous_testing();
     return 0;
 }
 
@@ -120,7 +138,7 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
                 {
                     void *ptr = head;
                     head = head->next;
-                    int return_value = Mem_Free(ptr,1,1);
+                    int return_value = Mem_Free(ptr, coalesce, release);
 
                     if(return_value == -1)
                         printf("Mem_Free(): Could not free the memory.");
@@ -135,7 +153,7 @@ void read_file_process_requests(char *filename, int expand, int coalesce, int re
         }
     }
 
-    print_requests_queue();    
+    // print_requests_queue();    
 }
 
 void print_requests_queue()
